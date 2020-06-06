@@ -1,1 +1,1 @@
-# MagnifiSoccer
+# MagnifiSoccer Project
