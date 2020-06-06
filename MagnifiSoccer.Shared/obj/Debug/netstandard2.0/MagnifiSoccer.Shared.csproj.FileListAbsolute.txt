@@ -1,0 +1,9 @@
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\bin\Debug\netstandard2.0\MagnifiSoccer.Shared.deps.json
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\bin\Debug\netstandard2.0\MagnifiSoccer.Shared.dll
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\bin\Debug\netstandard2.0\MagnifiSoccer.Shared.pdb
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\obj\Debug\netstandard2.0\MagnifiSoccer.Shared.csprojAssemblyReference.cache
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\obj\Debug\netstandard2.0\MagnifiSoccer.Shared.AssemblyInfoInputs.cache
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\obj\Debug\netstandard2.0\MagnifiSoccer.Shared.AssemblyInfo.cs
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\obj\Debug\netstandard2.0\MagnifiSoccer.Shared.dll
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\obj\Debug\netstandard2.0\MagnifiSoccer.Shared.pdb
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.Shared\obj\Debug\netstandard2.0\MagnifiSoccer.Shared.csproj.CoreCompileInputs.cache
