@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<parameters>
+  <parameter name="IIS Web Application Name" description="" value="MagnifiSoccerAPI" tags="IisApp">
+    <parameterEntry kind="ProviderPath" scope="IisApp" match="^C:\\Users\\yunus\\source\\repos\\MagnifiSoccer\\MagnifiSoccer\\MagnifiSoccer\.API\\obj\\Release\\netcoreapp3\.1\\PubTmp\\Out\\$" />
+  </parameter>
+  <parameter name="MagnifiSoccer.API.Models.ApplicationDbContext" description="" value="Data Source=tcp:bussplus.database.windows.net,1433;Initial Catalog=magnifisoccerdb;User Id=musa@bussplus;Password=2Kudamono" tags="dbfullsql">
+    <parameterEntry kind="ProviderPath" scope="dbfullsql" match="^C:\\Users\\yunus\\source\\repos\\MagnifiSoccer\\MagnifiSoccer\\MagnifiSoccer\.API\\obj\\Release\\netcoreapp3\.1\\PubTmp\\EFSQLScripts\\MagnifiSoccer\.API\.Models\.ApplicationDbContext\.sql$" />
+  </parameter>
+</parameters>

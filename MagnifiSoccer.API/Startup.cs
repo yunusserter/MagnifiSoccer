@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CloudinaryDotNet;
 using MagnifiSoccer.API.Models;
 using MagnifiSoccer.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace MagnifiSoccer.API
@@ -35,13 +37,20 @@ namespace MagnifiSoccer.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
             });
 
-            services.AddCors();
+
+            services.AddCors(opt =>
+            {
+                opt.AddDefaultPolicy(x =>
+                {
+                    x.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                });
+            });
+
 
             services.AddIdentity<User, IdentityRole>(options =>
             {
@@ -74,6 +83,7 @@ namespace MagnifiSoccer.API
             services.AddScoped<IGameService, GameService>();
 
             services.AddTransient<IMailService, SendGirdMailService>();
+            services.AddTransient<Cloudinary>();
 
             services.AddControllers().AddNewtonsoftJson(options =>
                 options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
@@ -93,7 +103,8 @@ namespace MagnifiSoccer.API
                 app.UseHsts();
             }
 
-            app.UseCors(option => option.WithOrigins("http://localhost:8080").AllowAnyHeader().AllowAnyMethod());
+
+            app.UseCors();
 
             app.UseHttpsRedirection();
 

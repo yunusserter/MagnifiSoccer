@@ -16,5 +16,6 @@ namespace MagnifiSoccer.API.Models
         public decimal OverAllRating { get; set; }
 
         public ICollection<Rating> Ratings { get; set; }
+        public ICollection<GroupMember> GroupMembers { get; set; }
     }
 }

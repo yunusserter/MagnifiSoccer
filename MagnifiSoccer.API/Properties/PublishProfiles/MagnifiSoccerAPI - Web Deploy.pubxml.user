@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TimeStampOfAssociatedLegacyPublishXmlFile />
+    <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAEPJoVYIqh0K7gUlWrz1m+AAAAAACAAAAAAAQZgAAAAEAACAAAADBwVDAzb6oJxtIoENYF2ajWpCpAKYW/kRKHwjkZJDKbgAAAAAOgAAAAAIAACAAAABJguwTaKvskPzzFwLt0rOsI/qx1zXSTojCyfpwU77XQYAAAABK54dpf4KSfzm0kVzjRwA6dS7WbgGXLOMMj5jZKmrqiKwr7v12Srgju2kb0T5FpsPLS1labj/iF+bvBj5mHxvfDdTwUwzfsorvSTqQ9d6gs/tsNPuL8lqTmGT3rsVN3Y2aBIvsKPSB70i/uk+vevYl6axGIHl1FmUByESN3Tl8U0AAAABqDlJa3G8drzMW72BFOt+sRGToe/WAaD5HB2fspafTc/tEPgaCO486UtE40wNrbA29/rScWqXx1FYuoZbgjcWc</EncryptedPassword>
+  </PropertyGroup>
+  <ItemGroup>
+    <EFMigrations Include="MagnifiSoccer.API.Models.ApplicationDbContext">
+      <Value>Data Source=tcp:bussplus.database.windows.net,1433%3bInitial Catalog=magnifisoccerdb%3bUser Id=musa%40bussplus%3bPassword=2Kudamono</Value>
+    </EFMigrations>
+  </ItemGroup>
+</Project>

@@ -13,6 +13,7 @@ using MagnifiSoccer.Shared.Responses;
 using MagnifiSoccer.Shared.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -27,13 +28,15 @@ namespace MagnifiSoccer.API.Services
         Task<UserManagerResponse> ResetPasswordAsync(ResetPasswordViewModel model);
         User GetById(string userId);
         List<GroupMember> GetAllForSquad(string userId);
+        Task<UserManagerResponse> ResetPasswordIsLogin(ResetPasswordForDto model, string userId);
+        Task<UserManagerResponse> ChangeUser(UserForDto model, string userId);
     }
 
     public class UserService : IUserService
     {
-        private UserManager<User> _userManager;
-        private IConfiguration _configuration;
-        private IMailService _mailService;
+        private readonly UserManager<User> _userManager;
+        private readonly IConfiguration _configuration;
+        private readonly IMailService _mailService;
         private readonly ApplicationDbContext _context;
 
         public UserService(UserManager<User> userManager, IConfiguration configuration, IMailService mailService, ApplicationDbContext context)
@@ -52,14 +55,24 @@ namespace MagnifiSoccer.API.Services
             if (registerForDto.Password != registerForDto.ConfirmPassword)
                 return new UserManagerResponse
                 {
-                    Message = "Confirm password doesn't match the password.",
+                    Message = "Şifreler eşleşmiyor.",
                     IsSuccess = false
                 };
+
+            var user = _context.Users.SingleOrDefaultAsync(x => x.UserName == registerForDto.UserName).Result;
+            if (user != null)
+            {
+                return new UserManagerResponse
+                {
+                    Message = "Kullanıcı adı kullanımda.",
+                    IsSuccess = false
+                };
+            }
 
             var identityUser = new User
             {
                 Email = registerForDto.Email,
-                UserName = registerForDto.Email,
+                UserName = registerForDto.UserName,
                 FirstName = registerForDto.FirstName,
                 LastName = registerForDto.LastName
             };
@@ -75,11 +88,11 @@ namespace MagnifiSoccer.API.Services
                     $"{_configuration["AppUrl"]}/api/auth/confirmEmail?userId={identityUser.Id}&token={validEmailToken}";
 
                 await _mailService.SendMailAsync(identityUser.Email, "Confirm your email",
-                    $"<h1>Welcome to MagnifiSoccer</h1><p>Please confirm your email by <a href='{url}'>Click here.</a></p>");
+                    $"<h1>MagnifiSoccer'e hoş geldin.</h1><p>E-posta aktivasyonu için <a href='{url}'>buraya tıklayınız.</a></p>");
 
                 return new UserManagerResponse
                 {
-                    Message = "User created successfully.",
+                    Message = "Kayıt başarılı! Giriş yapabilirsiniz.",
                     IsSuccess = true
                 };
             }
@@ -95,10 +108,11 @@ namespace MagnifiSoccer.API.Services
         public async Task<UserManagerResponse> LoginUserAsync(LoginForDto loginForDto)
         {
             var user = await _userManager.FindByEmailAsync(loginForDto.Email);
+
             if (user == null)
                 return new UserManagerResponse
                 {
-                    Message = "There is no user with that e-mail address.",
+                    Message = "Bu e-posta adresine sahip bir kullanıcı yok.",
                     IsSuccess = false
                 };
 
@@ -106,7 +120,7 @@ namespace MagnifiSoccer.API.Services
             if (!result)
                 return new UserManagerResponse
                 {
-                    Message = "Invalid password.",
+                    Message = "Geçersiz şifre.",
                     IsSuccess = false
                 };
 
@@ -138,7 +152,8 @@ namespace MagnifiSoccer.API.Services
                 EmailConfirmed = user.EmailConfirmed,
                 PhoneNumber = user.PhoneNumber,
                 Remainder = user.Remainder,
-                OverAllRating = user.OverAllRating
+                OverAllRating = user.OverAllRating,
+                UserName = user.UserName
             };
 
             return new UserManagerResponse
@@ -157,7 +172,7 @@ namespace MagnifiSoccer.API.Services
                 return new UserManagerResponse()
                 {
                     IsSuccess = false,
-                    Message = "User not found."
+                    Message = "Kullanıcı bulunamadı."
                 };
 
             var decodedToken = WebEncoders.Base64UrlDecode(token);
@@ -168,14 +183,14 @@ namespace MagnifiSoccer.API.Services
                 return new UserManagerResponse
                 {
                     IsSuccess = true,
-                    Message = "Email confirmed succussfully!"
+                    Message = "E-posta aktivasyonu başarılı!"
                 };
 
 
             return new UserManagerResponse
             {
                 IsSuccess = false,
-                Message = "Email did not confirm!",
+                Message = "E-posta aktivasyonu başarısız!",
                 Errors = result.Errors.Select(e => e.Description)
             };
         }
@@ -188,7 +203,7 @@ namespace MagnifiSoccer.API.Services
                 return new UserManagerResponse
                 {
                     IsSuccess = false,
-                    Message = "No user associated with email"
+                    Message = "E-posta ile ilişkilendirilmiş kullanıcı yok."
                 };
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -197,13 +212,13 @@ namespace MagnifiSoccer.API.Services
 
             string url = $"{_configuration["AppUrl"]}/resetPassword?email={email}&token={validToken}";
 
-            await _mailService.SendMailAsync(email, "Reset Password",
-                $"<h1>Follow the instructions to reset your password.</h1> <p>To reset your password <a href='{url}'>click here</p>");
+            await _mailService.SendMailAsync(email, "Şifre yenileme",
+                $"<h1>Şifre yenileme.</h1> <p>Şifrenizi yenilemek için <a href='{url}'>buraya tıklayınız.</p>");
 
             return new UserManagerResponse
             {
                 IsSuccess = true,
-                Message = "Reset password URL has been sent to email successfully!"
+                Message = "Şifre yenileme bağlantısı e-posta adresinize gönderildi!"
             };
         }
 
@@ -214,7 +229,7 @@ namespace MagnifiSoccer.API.Services
                 return new UserManagerResponse
                 {
                     IsSuccess = false,
-                    Message = "No user associated with email."
+                    Message = "E-posta ile ilişkilendirilmiş kullanıcı yok."
                 };
 
             if (model.NewPassword != model.ConfirmPassword)
@@ -222,7 +237,7 @@ namespace MagnifiSoccer.API.Services
                 return new UserManagerResponse
                 {
                     IsSuccess = false,
-                    Message = "Password doesn't match its confirmation"
+                    Message = "Şifreler eşleşmiyor. Kontrol ediniz."
                 };
             }
             var decodedToken = WebEncoders.Base64UrlDecode(model.Token);
@@ -233,13 +248,13 @@ namespace MagnifiSoccer.API.Services
                 return new UserManagerResponse
                 {
                     IsSuccess = true,
-                    Message = "Password has been reset successfully!"
+                    Message = "Şifre yenileme başarılı."
                 };
 
             return new UserManagerResponse
             {
                 IsSuccess = false,
-                Message = "Something went wrong.",
+                Message = "Bir şeyler yanlış gitti.",
                 Errors = result.Errors.Select(e => e.Description)
             };
         }
@@ -272,6 +287,127 @@ namespace MagnifiSoccer.API.Services
                 }
                 return users;
             }
+        }
+
+        public async Task<UserManagerResponse> ResetPasswordIsLogin(ResetPasswordForDto model, string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return new UserManagerResponse
+                {
+                    IsSuccess = false,
+                    Message = "Kullanıcı bulunamadı."
+                };
+
+            if (!LoginUserAsync(new LoginForDto { Email = user.Email, Password = model.CurrentPassword }).Result.IsSuccess)
+            {
+                return new UserManagerResponse
+                {
+                    IsSuccess = false,
+                    Message = "Geçerli şifre yanlış. Lütfen kontrol ediniz."
+                };
+            }
+
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                return new UserManagerResponse
+                {
+                    IsSuccess = false,
+                    Message = "Şifreler eşleşmiyor. Kontrol ediniz."
+                };
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+            if (result.Succeeded)
+                return new UserManagerResponse
+                {
+                    IsSuccess = true,
+                    Message = "Şifre yenileme başarılı."
+                };
+
+            return new UserManagerResponse
+            {
+                IsSuccess = false,
+                Message = "Bir şeyler yanlış gitti.",
+                Errors = result.Errors.Select(e => e.Description)
+            };
+        }
+
+        public async Task<UserManagerResponse> ChangeUser(UserForDto model, string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return new UserManagerResponse
+                {
+                    IsSuccess = false,
+                    Message = "Kullanıcı bulunamadı."
+                };
+
+            var userName = _context.Users.SingleOrDefaultAsync(x => x.UserName == model.UserName).Result;
+            if (userName != null && userName.UserName != model.UserName)
+            {
+                return new UserManagerResponse
+                {
+                    IsSuccess = false,
+                    Message = "Kullanıcı adı kullanılıyor."
+                };
+            }
+
+            if (model.FirstName != null && user.FirstName != model.FirstName) user.FirstName = model.FirstName;
+            if (model.LastName != null && user.LastName != model.LastName) user.LastName = model.LastName;
+            if (model.UserName != null && user.UserName != model.UserName) user.UserName = model.UserName;
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                IdentityOptions _options = new IdentityOptions();
+
+                var claims = new List<Claim>()
+                {
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                };
+
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["AuthSettings:Key"]));
+
+                var token = new JwtSecurityToken(
+                    issuer: _configuration["AuthSettings:Issuer"],
+                    audience: _configuration["AuthSettings:Audience"],
+                    claims: claims,
+                    expires: DateTime.Now.AddDays(30),
+                    signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+                );
+
+                string tokenAsString = new JwtSecurityTokenHandler().WriteToken(token);
+                var currentUser = new
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    EmailConfirmed = user.EmailConfirmed,
+                    PhoneNumber = user.PhoneNumber,
+                    Remainder = user.Remainder,
+                    OverAllRating = user.OverAllRating,
+                    UserName = user.UserName
+                };
+                return new UserManagerResponse
+                {
+                    IsSuccess = true,
+                    Message = tokenAsString,
+                    User = currentUser,
+                    ExpireDate = token.ValidTo
+                };
+            }
+            return new UserManagerResponse
+            {
+                IsSuccess = false,
+                Message = "Bir şeyler yanlış gitti.",
+                Errors = result.Errors.Select(e => e.Description)
+            };
         }
     }
 }

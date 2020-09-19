@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using MagnifiSoccer.API.Models;
 using MagnifiSoccer.Shared.Dtos;
 using MagnifiSoccer.Shared.Dtos.GroupDtos;
@@ -12,17 +14,18 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace MagnifiSoccer.API.Services
 {
     public interface IGroupService
     {
-        Group GetGroupAsync(string groupId);
-        List<Group> GetListGroupAsync(string userId);
-        List<Group> GetAllGroupForSearch();
+        Group GetGroup(string groupId);
+        List<Group> GetListGroup(string userId);
         Task<GroupManagerResponse> CreateGroupAsync(GroupForDto model, string userId);
         Task<GroupManagerResponse> UpdateGroupAsync(GroupForDto model, string userId);
         Task<GroupManagerResponse> LeaveGroupAsync(string groupId, string userId);
@@ -31,18 +34,27 @@ namespace MagnifiSoccer.API.Services
         Task<GroupManagerResponse> RemoveGroupAsync(string userId, RemoveGroupForDto model);
         Task<GroupManagerResponse> JoinGroupAsync(JoinGroupForDto model, string userId);
         Task<GroupManagerResponse> InviteGroupAsync(JoinGroupForDto model, string userId);
+        List<Group> GetGroupsForSearch(string searchText);
     }
 
     public class GroupService : IGroupService
     {
         private readonly ApplicationDbContext _context;
-        private UserManager<User> _userManager;
-        private IWebHostEnvironment _environment;
-        public GroupService(ApplicationDbContext context, UserManager<User> userManager, IWebHostEnvironment environment)
+        private readonly UserManager<User> _userManager;
+        private readonly IWebHostEnvironment _environment;
+        private readonly Cloudinary _cloudinary;
+
+        public GroupService(ApplicationDbContext context,
+            UserManager<User> userManager,
+            IWebHostEnvironment environment
+            )
         {
             _context = context;
             _userManager = userManager;
             _environment = environment;
+
+            Account account = new Account("dxxtg8kme", "623915428118857", "RRux-bnTIn90MuKKDiab25Zsic0");
+            _cloudinary = new Cloudinary(account);
         }
 
         public async Task<GroupManagerResponse> CreateGroupAsync(GroupForDto model, string userId)
@@ -53,48 +65,48 @@ namespace MagnifiSoccer.API.Services
 
             await using (_context)
             {
-                if (model.PhotoUrl.Length > 0)
+                var file = model.File;
+                var uploadResult = new ImageUploadResult();
+
+                if (file != null)
                 {
-                    if (!Directory.Exists(_environment.WebRootPath + "..\\..\\..\\magnifisoccer-reactjs\\Upload\\"))
+                    await using (var steam = file.OpenReadStream())
                     {
-                        Directory.CreateDirectory(_environment.WebRootPath + "..\\..\\..\\magnifisoccer-reactjs\\Upload\\");
+                        var uploadParams = new ImageUploadParams
+                        {
+                            File = new FileDescription(file.Name, steam)
+                        };
+                        uploadResult = _cloudinary.Upload(uploadParams);
                     }
-
-                    await using FileStream fileStream = System.IO.File.Create(_environment.WebRootPath + "..\\..\\..\\magnifisoccer-reactjs\\Upload\\" + model.PhotoUrl.FileName);
-                    await model.PhotoUrl.CopyToAsync(fileStream);
-                    fileStream.Flush();
-                    var group = new Group
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        GroupName = model.GroupName,
-                        PhotoUrl = model.PhotoUrl.FileName
-                    };
-                    var user = await _userManager.FindByIdAsync(userId);
-                    var groupMember = new GroupMember
-                    {
-                        GroupId = group.Id,
-                        UserId = user.Id,
-                        Role = "Admin",
-                        FirstName = user.FirstName,
-                        LastName = user.LastName
-                    };
-
-                    await _context.AddAsync(groupMember);
-                    await _context.AddAsync(group);
-                    await _context.SaveChangesAsync();
-
-                    return new GroupManagerResponse
-                    {
-                        Message = "Group created successfully.",
-                        IsSuccess = true
-                    };
-
-
+                    model.Url = uploadResult.Url.ToString();
+                    model.PublicId = uploadResult.PublicId;
                 }
+                
+
+                var group = new Group
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    GroupName = model.GroupName,
+                    PhotoUrl = model?.Url
+                };
+                var user = await _userManager.FindByIdAsync(userId);
+                var groupMember = new GroupMember
+                {
+                    GroupId = group.Id,
+                    UserId = user.Id,
+                    Role = "Admin",
+                    FirstName = user.FirstName,
+                    LastName = user.LastName
+                };
+
+                await _context.AddAsync(groupMember);
+                await _context.AddAsync(group);
+                await _context.SaveChangesAsync();
+
                 return new GroupManagerResponse
                 {
-                    Message = "Group not created.",
-                    IsSuccess = false
+                    Message = "Grup oluşturuldu.",
+                    IsSuccess = true
                 };
             }
         }
@@ -103,7 +115,6 @@ namespace MagnifiSoccer.API.Services
         {
             if (model == null)
                 throw new NullReferenceException("Group model is null.");
-
 
             await using (_context)
             {
@@ -115,27 +126,32 @@ namespace MagnifiSoccer.API.Services
                 {
                     return new GroupManagerResponse
                     {
-                        Message = "Group was not found or 403 forbidden.",
+                        Message = "Grup bulunamadı veya bu işlem için yetkiniz yok.",
                         IsSuccess = false
                     };
                 }
 
-                if (!Directory.Exists(_environment.WebRootPath + "..\\..\\..\\magnifisoccer-reactjs\\Upload\\"))
-                {
-                    Directory.CreateDirectory(_environment.WebRootPath + "..\\..\\..\\magnifisoccer-reactjs\\Upload\\");
-                }
-
-                if (model.GroupName!=null)
+                if (model.GroupName != null)
                 {
                     group.GroupName = model.GroupName;
                 }
 
-                if (model.PhotoUrl!=null)
+                var file = model.File;
+                var uploadResult = new ImageUploadResult();
+
+                if (file != null)
                 {
-                    await using FileStream fileStream = System.IO.File.Create(_environment.WebRootPath + "..\\..\\..\\magnifisoccer-reactjs\\Upload\\" + model.PhotoUrl.FileName);
-                    await model.PhotoUrl.CopyToAsync(fileStream);
-                    fileStream.Flush();
-                    group.PhotoUrl = model.PhotoUrl.FileName;
+                    await using (var steam = file.OpenReadStream())
+                    {
+                        var uploadParams = new ImageUploadParams
+                        {
+                            File = new FileDescription(file.Name, steam)
+                        };
+                        uploadResult = _cloudinary.Upload(uploadParams);
+                    }
+                    model.Url = uploadResult.Url.ToString();
+                    model.PublicId = uploadResult.PublicId;
+                    group.PhotoUrl = model.Url.ToString();
                 }
 
                 _context.Update(group);
@@ -143,7 +159,7 @@ namespace MagnifiSoccer.API.Services
 
                 return new GroupManagerResponse
                 {
-                    Message = "Group updated successfully.",
+                    Message = "Grup düzenlendi.",
                     IsSuccess = true
                 };
 
@@ -183,11 +199,12 @@ namespace MagnifiSoccer.API.Services
                     var groupUser = await groupUsers.SingleOrDefaultAsync(p => p.UserId == userId);
                     _context.Remove(groupUser);
                 }
+
                 await _context.SaveChangesAsync();
 
                 return new GroupManagerResponse
                 {
-                    Message = "Left from group successfully.",
+                    Message = "Gruptan başarıyla ayrıldınız.",
                     IsSuccess = true
                 };
             }
@@ -207,10 +224,11 @@ namespace MagnifiSoccer.API.Services
                         u.UserId == model.UserId && u.GroupId == model.GroupId);
 
                 if (_context.GroupMembers.SingleOrDefaultAsync(u =>
-                    u.UserId == adminUserId && u.GroupId == model.GroupId).Result.Role != "Admin" || model.UserId == adminUserId)
+                        u.UserId == adminUserId && u.GroupId == model.GroupId).Result.Role != "Admin" ||
+                    model.UserId == adminUserId)
                     return new GroupManagerResponse
                     {
-                        Message = "You are not authorized to do this.",
+                        Message = "Bu işlem için yetkiniz yok.",
                         IsSuccess = false
                     };
 
@@ -218,7 +236,7 @@ namespace MagnifiSoccer.API.Services
                 if (groupMember == null || group == null)
                     return new GroupManagerResponse
                     {
-                        Message = "There is no such person in the group or no such group.",
+                        Message = "Grupta böyle bir kişi yok veya böyle bir grup yok.",
                         IsSuccess = false
                     };
 
@@ -226,7 +244,7 @@ namespace MagnifiSoccer.API.Services
                 await _context.SaveChangesAsync();
                 return new GroupManagerResponse
                 {
-                    Message = "Member was expelled from the group.",
+                    Message = "Üye gruptan çıkarıldı.",
                     IsSuccess = true
                 };
             }
@@ -242,20 +260,22 @@ namespace MagnifiSoccer.API.Services
             {
                 var group = await _context.Groups.FindAsync(model.GroupId);
                 var groupMember =
-                    await _context.GroupMembers.SingleOrDefaultAsync(u => u.UserId == model.UserId && u.GroupId == model.GroupId);
+                    await _context.GroupMembers.SingleOrDefaultAsync(u =>
+                        u.UserId == model.UserId && u.GroupId == model.GroupId);
 
                 if (_context.GroupMembers.SingleOrDefaultAsync(u =>
-                    u.UserId == adminUserId && u.GroupId == model.GroupId).Result.Role != "Admin" || model.UserId == adminUserId)
+                        u.UserId == adminUserId && u.GroupId == model.GroupId).Result.Role != "Admin" ||
+                    model.UserId == adminUserId)
                     return new GroupManagerResponse
                     {
-                        Message = "You are not authorized to do this.",
+                        Message = "Bu işlem için yetkiniz yok.",
                         IsSuccess = false
                     };
 
                 if (groupMember == null || group == null)
                     return new GroupManagerResponse
                     {
-                        Message = "There is no such person in the group or no such group.",
+                        Message = "Grupta böyle bir kişi yok veya böyle bir grup yok.",
                         IsSuccess = false
                     };
 
@@ -264,7 +284,8 @@ namespace MagnifiSoccer.API.Services
                 await _context.SaveChangesAsync();
                 return new GroupManagerResponse
                 {
-                    Message = "Edited group member successfully.",
+                    Message =
+                        $"{groupMember.FirstName} {groupMember.LastName} {(groupMember.Role == "Admin" ? "yönetici" : "üye")} olarak düzenlendi.",
                     IsSuccess = true
                 };
             }
@@ -282,7 +303,7 @@ namespace MagnifiSoccer.API.Services
                 var members = _context.GroupMembers.Where(p => p.GroupId == group.Id).ToList();
 
                 if (_context.GroupMembers.SingleOrDefaultAsync(u =>
-                        u.UserId == userId && u.GroupId == model.GroupId).Result.Role != "Admin")
+                    u.UserId == userId && u.GroupId == model.GroupId).Result.Role != "Admin")
                     return new GroupManagerResponse
                     {
                         Message = "You are not authorized to do this.",
@@ -294,7 +315,7 @@ namespace MagnifiSoccer.API.Services
                 await _context.SaveChangesAsync();
                 return new GroupManagerResponse
                 {
-                    Message = "The group has been deleted.",
+                    Message = "Grup silindi.",
                     IsSuccess = true
                 };
             }
@@ -307,14 +328,16 @@ namespace MagnifiSoccer.API.Services
 
             await using (_context)
             {
-                if (await _context.GroupMembers.FirstOrDefaultAsync(u => u.UserId == userId && u.GroupId == model.GroupId) != null)
+                if (await _context.GroupMembers.FirstOrDefaultAsync(u =>
+                    u.UserId == userId && u.GroupId == model.GroupId) != null)
                 {
                     return new GroupManagerResponse
                     {
-                        Message = "You are already a member of the group.",
+                        Message = "Gruba zaten üyesiniz.",
                         IsSuccess = false
                     };
                 }
+
                 var user = await _userManager.FindByIdAsync(userId);
                 var newUser = new GroupMember
                 {
@@ -329,7 +352,7 @@ namespace MagnifiSoccer.API.Services
                 await _context.SaveChangesAsync();
                 return new GroupManagerResponse
                 {
-                    Message = "You have joined the group.",
+                    Message = "Gruba katıldınız.",
                     IsSuccess = true
                 };
             }
@@ -342,12 +365,22 @@ namespace MagnifiSoccer.API.Services
 
             await using (_context)
             {
-                var inviteUser = await _context.Users.SingleOrDefaultAsync(u => u.Email == model.Email);
-                if (await _context.GroupMembers.FirstOrDefaultAsync(u => u.UserId == inviteUser.Id && u.GroupId == model.GroupId) != null)
+                var inviteUser = await _context.Users.SingleOrDefaultAsync(u => u.UserName == model.UserName);
+                if (inviteUser == null)
                 {
                     return new GroupManagerResponse
                     {
-                        Message = "User are already a member of the group.",
+                        Message = "Kullanıcı bulunamadı.",
+                        IsSuccess = false
+                    };
+                }
+
+                if (await _context.GroupMembers.FirstOrDefaultAsync(u =>
+                    u.UserId == inviteUser.Id && u.GroupId == model.GroupId) != null)
+                {
+                    return new GroupManagerResponse
+                    {
+                        Message = "Kullanıcı gruba zaten üye.",
                         IsSuccess = false
                     };
                 }
@@ -366,21 +399,30 @@ namespace MagnifiSoccer.API.Services
                 await _context.SaveChangesAsync();
                 return new GroupManagerResponse
                 {
-                    Message = "User have joined the group.",
+                    Message = $"{member.FirstName} {member.LastName} gruba alındı.",
                     IsSuccess = true
                 };
             }
         }
 
-        public Group GetGroupAsync(string groupId)
+        public Group GetGroup(string groupId)
         {
             using (_context)
             {
-                return _context.Groups.SingleOrDefault(g => g.Id == groupId);
+                var group = _context.Groups.Include(x => x.GroupMembers).SingleOrDefault(x => x.Id == groupId);
+                if (group == null)
+                    return null;
+
+                foreach (var g in group.GroupMembers)
+                {
+                    g.User = new User { OverAllRating = _context.Users.Find(g.UserId).OverAllRating };
+                }
+
+                return group;
             }
         }
 
-        public List<Group> GetListGroupAsync(string userId)
+        public List<Group> GetListGroup(string userId)
         {
             using (_context)
             {
@@ -406,13 +448,14 @@ namespace MagnifiSoccer.API.Services
             }
         }
 
-        public List<Group> GetAllGroupForSearch()
+        public List<Group> GetGroupsForSearch(string searchText)
         {
             using (_context)
             {
-                var groups = _context.Groups.ToList();
-                return groups;
+                var query = _context.Groups.Where(x => x.GroupName.Contains(searchText));
+                return query.ToList();
             }
+
         }
     }
 }

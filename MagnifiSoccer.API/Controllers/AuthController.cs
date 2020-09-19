@@ -20,19 +20,17 @@ namespace MagnifiSoccer.API.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private IUserService _userService;
-        private IMailService _mailService;
-        private IConfiguration _configuration;
+        private readonly IUserService _userService;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(IUserService userService, IMailService mailService, IConfiguration configuration)
+        public AuthController(IUserService userService, IConfiguration configuration)
         {
             _userService = userService;
-            _mailService = mailService;
             _configuration = configuration;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody]RegisterForDto model)
+        public async Task<IActionResult> Register([FromBody] RegisterForDto model)
         {
             if (ModelState.IsValid)
             {
@@ -50,7 +48,7 @@ namespace MagnifiSoccer.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody]LoginForDto model)
+        public async Task<IActionResult> Login([FromBody] LoginForDto model)
         {
             if (ModelState.IsValid)
             {
@@ -58,8 +56,6 @@ namespace MagnifiSoccer.API.Controllers
 
                 if (result.IsSuccess)
                 {
-                    /* await _mailService.SendMailAsync(loginForDto.Email, $"New login",
-                        $"<h1>Hey!, new login to your account noticed.</h1><p>New login to your account at {DateTime.Now}</p>");*/
                     return Ok(result);
                 }
 
@@ -104,7 +100,7 @@ namespace MagnifiSoccer.API.Controllers
         }
 
         [HttpPost("resetPassword")]
-        public async Task<IActionResult> ResetPassword([FromForm]ResetPasswordViewModel model)
+        public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordViewModel model)
         {
             if (ModelState.IsValid)
             {
@@ -119,7 +115,25 @@ namespace MagnifiSoccer.API.Controllers
 
             return BadRequest("Some properties are not valid.");
         }
-        
+
+        [HttpPut("resetPasswordIsLogin")]
+        public async Task<IActionResult> ResetPasswordIsLogin([FromBody] ResetPasswordForDto model)
+        {
+            if (ModelState.IsValid)
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+                var result = await _userService.ResetPasswordIsLogin(model, userId);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+                return BadRequest(result);
+            }
+
+            return BadRequest("Some properties are not valid.");
+        }
+
         [HttpGet("{userId}")]
         public IActionResult GetById(string userId)
         {
@@ -145,6 +159,24 @@ namespace MagnifiSoccer.API.Controllers
             }
 
             return BadRequest();
+        }
+
+        [HttpPut("changeUser")]
+        public async Task<IActionResult> ChangeUser([FromBody] UserForDto model)
+        {
+            if (ModelState.IsValid)
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+                var result = await _userService.ChangeUser(model, userId);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(result);
+                }
+                return BadRequest(result);
+            }
+
+            return BadRequest("Some properties are not valid.");
         }
     }
 }

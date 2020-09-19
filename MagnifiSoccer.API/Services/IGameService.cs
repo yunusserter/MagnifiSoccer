@@ -25,20 +25,26 @@ namespace MagnifiSoccer.API.Services
         Task<GameManagerResponse> PlayerRatingAsync(PlayerRatingForDto model, string userId);
         Task<GameManagerResponse> ResultAsync(ResultForDto model, string userId);
         List<Rating> GetListRating(string userId);
+        Task<GameManagerResponse> UpdateGameSentEmail(string userId, int gameId);
+        List<Game> NoticeAsync(string userId);
+        Game GetGameForthComing(string userId);
+        List<GamePlayer> GetListGameRating(string userId);
+        List<GamePlayer> GetLastGameForGraph(string userId);
     }
 
     public class GameService : IGameService
     {
         private readonly ApplicationDbContext _context;
-        private IMailService _mailService;
-        private UserManager<User> _userManager;
-        private IConfiguration _configuration;
+        private readonly IMailService _mailService;
+        private readonly UserManager<User> _userManager;
+        public IConfiguration Configuration { get; }
+
         public GameService(ApplicationDbContext context, IMailService mailService, UserManager<User> userManager, IConfiguration configuration)
         {
             _context = context;
             _mailService = mailService;
             _userManager = userManager;
-            _configuration = configuration;
+            Configuration = configuration;
         }
 
         public async Task<GameManagerResponse> CreateGameAsync(CreateGameForDto model, string userId)
@@ -51,7 +57,7 @@ namespace MagnifiSoccer.API.Services
                 p.UserId == userId && p.GroupId == model.GroupId && p.Role == "Admin") == null)
                 return new GameManagerResponse
                 {
-                    Message = "Only admins can create.",
+                    Message = "Sadece grup yöneticisi oyun oluşturabilir.",
                     IsSuccess = false
                 };
 
@@ -73,7 +79,7 @@ namespace MagnifiSoccer.API.Services
 
                 return new GameManagerResponse
                 {
-                    Message = "Game created successfully.",
+                    Message = "Oyun başarıyla oluşturuldu.",
                     IsSuccess = true
                 };
             }
@@ -95,7 +101,7 @@ namespace MagnifiSoccer.API.Services
                 {
                     return new GameManagerResponse
                     {
-                        Message = "Game was not found or 403 forbidden.",
+                        Message = "Oyun bulunamadı veya yetkiniz yok.",
                         IsSuccess = false
                     };
                 }
@@ -110,7 +116,7 @@ namespace MagnifiSoccer.API.Services
 
                 return new GameManagerResponse
                 {
-                    Message = "Game updated successfully.",
+                    Message = "Oyun başarıyla düzenlendi.",
                     IsSuccess = true
                 };
             }
@@ -126,19 +132,28 @@ namespace MagnifiSoccer.API.Services
                 var userClaim = await _context.GroupMembers.SingleOrDefaultAsync(u =>
                     u.UserId == userId && u.GroupId == model.GroupId && u.Role == "Admin");
                 var game = await _context.Games.FindAsync(model.GameId);
+                var players = _context.GamePlayers.Where(x => x.GameId == model.GameId).ToList();
 
                 if (userClaim == null || game == null)
                     return new GameManagerResponse
                     {
-                        Message = "Game was not found or 403 forbidden.",
+                        Message = "Oyun bulunamadı veya yetkiniz yok.",
                         IsSuccess = false
                     };
 
+                foreach (var player in players)
+                {
+                    var user = _userManager.FindByIdAsync(player.UserId).Result;
+                    await _mailService.SendMailAsync(user.Email, "Davetli olduğunuz oyun iptal edildi.",
+                        $"<h1>Davetli olduğunuz oyun iptal oldu!</h1><p>İptal edilen oyun bilgileri: {game.GameDate} {game.Location}.</p>");
+                }
+
+                _context.RemoveRange(players);
                 _context.Remove(game);
                 await _context.SaveChangesAsync();
                 return new GameManagerResponse
                 {
-                    Message = "The game has been deleted.",
+                    Message = "Oyun başarıyla silindi.",
                     IsSuccess = true
                 };
             }
@@ -148,48 +163,46 @@ namespace MagnifiSoccer.API.Services
         {
             using (_context)
             {
-                var game = _context.Games.FirstOrDefault(g => g.Id == gameId);
-                var group = _context.GroupMembers.Where(u => u.UserId == userId);
+                var game = _context.Games.Include(x => x.GamePlayers).FirstOrDefault(g => g.Id == gameId);
+                if (game == null)
+                {
+                    return null;
+                }
+                var group = _context.GroupMembers.Where(u => u.UserId == userId && u.Role == "Admin");
+
                 return @group.Any(u => u.GroupId == game.GroupId) ? game : null;
             }
         }
 
         public List<Game> GetListGame(string userId)
         {
-            using (_context)
+            var game = new List<Game>();
+            var myGames = _context.GamePlayers.Where(p => p.UserId == userId).ToList();
+            var isAdmin = _context.GroupMembers.Where(p => p.UserId == userId && p.Role == "Admin").ToList();
+            foreach (var temp in isAdmin.Select(g => _context.Games.Include(x => x.Group.GroupMembers).Where(p =>
+                  p.GroupId == g.GroupId && p.GamePlayers.SingleOrDefault(x => x.UserId == userId) == null).ToList()))
             {
-                var game = new List<Game>();
-                var myGames = _context.GamePlayers.Where(p => p.UserId == userId).ToList();
-                var isAdmin = _context.GroupMembers.FirstOrDefault(p => p.UserId == userId && p.Role == "Admin");
-                if (isAdmin!=null)
-                {
-                    var temp = _context.Games.SingleOrDefault(p =>
-                        p.GroupId == isAdmin.GroupId && p.GamePlayers.Count == 0);
-                    if (temp != null)
-                    {
-                        game.Add(temp);
-                    }
-                }
-
-                foreach (var g in myGames)
-                {
-                    game.Add(_context.Games.Find(g.GameId));
-                }
-
-                foreach (var g in game)
-                {
-                    var players = _context.GamePlayers.Where(p => p.GameId == g.Id).ToList();
-                    foreach (var player in players)
-                    {
-                        var temp = _userManager.FindByIdAsync(player.UserId).Result;
-                        player.User = new User { FirstName = temp.FirstName, LastName = temp.LastName };
-                    }
-                    g.GamePlayers = players;
-                    g.Group = _context.Groups.Find(g.GroupId);
-                }
-
-                return game.OrderByDescending(o => o.GameDate).ToList();
+                game.AddRange(temp);
             }
+
+            foreach (var g in myGames)
+            {
+                game.Add(_context.Games.Include(x => x.Group.GroupMembers).FirstOrDefault(x => x.Id == g.GameId));
+            }
+
+            foreach (var g in game)
+            {
+                var players = _context.GamePlayers.Where(p => p.GameId == g.Id).ToList();
+                foreach (var player in players)
+                {
+                    var temp = _userManager.FindByIdAsync(player.UserId).Result;
+                    player.User = new User { FirstName = temp.FirstName, LastName = temp.LastName };
+                }
+                g.GamePlayers = players;
+                g.Group = _context.Groups.FirstOrDefault(x => x.Id == g.GroupId);
+            }
+
+            return game.OrderByDescending(o => o.GameDate).ToList();
         }
 
         //public async Task<GameManagerResponse> AutoSquadAsync(AutoSquadForDto model, string userId)
@@ -275,20 +288,11 @@ namespace MagnifiSoccer.API.Services
                 }
 
                 var squad = new List<GamePlayer>();
-                var users = new List<string>();
-                var positions = new List<int>();
 
-                foreach (var u in model.Team1Users)
-                    users.Add(u);
-
-                foreach (var p in model.Team1Positions)
-                    positions.Add(p);
-
-                foreach (var u in model.Team2Users)
-                    users.Add(u);
-
-                foreach (var p in model.Team2Positions)
-                    positions.Add(p);
+                var users = model.Team1Users.ToList();
+                var positions = model.Team1Positions.ToList();
+                users.AddRange(model.Team2Users);
+                positions.AddRange(model.Team2Positions);
 
                 var team = 1;
                 for (var i = 0; i < model.Team1Positions.Count + model.Team2Positions.Count; i++)
@@ -296,12 +300,12 @@ namespace MagnifiSoccer.API.Services
                     if (i == model.Team1Positions.Count)
                         team = 2;
 
-                    squad.Add(new GamePlayer { UserId = users[i], Position = positions[i], GameId = model.GameId, Team = team.ToString() });
+                    squad.Add(new GamePlayer { UserId = users[i], Position = positions[i], GameId = model.GameId, Team = team.ToString(), InviteResponse = oldSquad.Find(x => x.UserId == users[i])?.InviteResponse });
                 }
 
                 await _context.AddRangeAsync(squad);
                 await _context.SaveChangesAsync();
-                return new GameManagerResponse { Message = "Squad edited.", IsSuccess = true };
+                return new GameManagerResponse { Message = "Kadro düzenlendi.", IsSuccess = true };
             }
         }
 
@@ -309,19 +313,60 @@ namespace MagnifiSoccer.API.Services
         {
             await using (_context)
             {
+                var url = "magnifisoccer-fc484.web.app/games";
+                string position = null;
                 var game = await _context.Games.SingleOrDefaultAsync(g => g.Id == gameId);
-                var gamePlayers = _context.GamePlayers.Where(u => u.GameId == game.Id).ToList();
+                var gamePlayers = _context.GamePlayers.Where(u => u.GameId == game.Id && u.InviteResponse == null).ToList();
 
                 foreach (var player in gamePlayers)
                 {
-                    var user = _context.Users.Find(player.UserId);
-                    await _mailService.SendMailAsync(user.Email, "A new event.",
-                        $"<h1>Congratulations!</h1><p>You have been invited to a new event. Event information:{game.GameDate} {game.Location}.</p>");
+                    switch (player.Position)
+                    {
+                        case 0: position = "KALECİ"; break;
+                        case 1: position = "DEFANS"; break;
+                        case 2: position = "ORTA SAHA"; break;
+                        case 3: position = "FORVET"; break;
+                    }
+
+                    var user = await _context.Users.FindAsync(player.UserId);
+                    await _mailService.SendMailAsync(user.Email, "Yeni bir oyuna davet edildiniz",
+                        $"<h1>Tebrikler!</h1><p>Yeni bir oyuna davet edildiniz. Katılım durumunuzu lütfen <a href='{url}'> buraya tıklayarak</a> belirtiniz. Oyun bilgileri: {position} {game.GameDate} {game.Location}.</p>");
                 }
                 return new GameManagerResponse
                 {
                     IsSuccess = true,
-                    Message = "Sent to email successfully!"
+                    Message = "E-posta gönderimi başarılı."
+                };
+            }
+        }
+
+        public async Task<GameManagerResponse> UpdateGameSentEmail(string userId, int gameId)
+        {
+            await using (_context)
+            {
+                var game = await _context.Games.FindAsync(gameId);
+
+                var players = _context.GamePlayers.Where(x => x.GameId == gameId).ToList();
+
+                string position = null;
+                foreach (var player in players)
+                {
+                    switch (player.Position)
+                    {
+                        case 0: position = "KALECİ"; break;
+                        case 1: position = "DEFANS"; break;
+                        case 2: position = "ORTA SAHA"; break;
+                        case 3: position = "FORVET"; break;
+                    }
+
+                    var user = _userManager.FindByIdAsync(player.UserId).Result;
+                    await _mailService.SendMailAsync(user.Email, "Davetli olduğunuz oyunda değişiklik oldu",
+                        $"<h1>Davetli olduğunuz oyunda değişiklik oldu!</h1><p>Oyun bilgileri: {position} {game.GameDate} {game.Location}.</p>");
+                }
+                return new GameManagerResponse
+                {
+                    Message = "Gönderildi.",
+                    IsSuccess = true
                 };
             }
         }
@@ -337,7 +382,7 @@ namespace MagnifiSoccer.API.Services
                 return new GameManagerResponse
                 {
                     IsSuccess = true,
-                    Message = $"Invite response: {model.Response}."
+                    Message = $"Katılım durumu: {model.Response}."
                 };
             }
         }
@@ -346,10 +391,15 @@ namespace MagnifiSoccer.API.Services
         {
             await using (_context)
             {
+                if (model.Rating.Count != model.UserId.Count || model.Rating.Count == 0)
+                {
+                    return new GameManagerResponse { Message = "Eksik giriş. Lütfen kontrol ediniz.", IsSuccess = false };
+                }
+
                 var game = await _context.Games.SingleOrDefaultAsync(g => g.Id == model.GameId);
                 if (game.GameDate == null && game.GameDate > DateTime.Now)
                 {
-                    return new GameManagerResponse { Message = "You cannot rate before the match is completed.", IsSuccess = false };
+                    return new GameManagerResponse { Message = "Oyun oynanmadan oylama yapılamaz.", IsSuccess = false };
                 }
 
                 var gamePlayer = _context.GamePlayers.Where(u => u.GameId == model.GameId).ToList();
@@ -358,7 +408,15 @@ namespace MagnifiSoccer.API.Services
 
                 if (_context.Ratings.Any(p => p.GameId == model.GameId && p.VoterUserId == userId))
                 {
-                    return new GameManagerResponse { Message = "You have already rated.", IsSuccess = false };
+                    return new GameManagerResponse { Message = "Tekrar oy veremezsiniz.", IsSuccess = false };
+                }
+
+                foreach (var rat in model.Rating)
+                {
+                    if (rat < 4 || rat > 10)
+                    {
+                        return new GameManagerResponse { Message = "Lütfen 4-10 aralığında puanlayınız.", IsSuccess = false };
+                    }
                 }
 
                 foreach (var playerId in model.UserId)
@@ -373,9 +431,21 @@ namespace MagnifiSoccer.API.Services
                     var rating = new Rating { UserId = playerId, VoterUserId = userId, GameId = model.GameId, RatingValue = model.Rating[index] };
                     index++;
                     _context.Add(rating);
+                    await _context.SaveChangesAsync();
+                    var allRating = _context.Ratings.Where(x => x.GameId == model.GameId && x.UserId == playerId).Select(x => x.RatingValue).ToList();
+                    var gameTemp = _context.GamePlayers
+                        .SingleOrDefault(x => x.GameId == model.GameId && x.UserId == playerId);
+                    if (gameTemp == null) continue;
+                    gameTemp.GameRating = allRating.Sum() / allRating.Count;
+                    _context.Update(gameTemp);
+                    await _context.SaveChangesAsync();
+                    var user = await _context.Users.FindAsync(playerId);
+                    user.OverAllRating = _context.GamePlayers.Where(x => x.UserId == playerId && x.GameRating != 0).Average(x => x.GameRating);
+                    _context.Update(user);
                 }
+
                 await _context.SaveChangesAsync();
-                return new GameManagerResponse { Message = "Players have been successfully rated.", IsSuccess = true };
+                return new GameManagerResponse { Message = "Oyuncular başarıyla oylandı.", IsSuccess = true };
 
             }
         }
@@ -388,34 +458,39 @@ namespace MagnifiSoccer.API.Services
                 if (_context.GroupMembers.FirstOrDefault(u =>
                     u.GroupId == game.GroupId && u.UserId == userId && u.Role == "Admin") == null)
                 {
-                    return new GameManagerResponse { Message = "You are not authorized to do this.", IsSuccess = false };
+                    return new GameManagerResponse { Message = "Bu işlem için yetkiniz yok.", IsSuccess = false };
                 }
 
                 if (game.GameDate.Value > DateTime.Now)
                 {
-                    return new GameManagerResponse { Message = "Match have been played yet.", IsSuccess = false };
+                    return new GameManagerResponse { Message = "Oyun henüz oynanmadı.", IsSuccess = false };
                 }
 
 
                 game.WinnerTeam = model.WinnerTeam;
-                var gamePlayers = _context.GamePlayers.Where(p => p.GameId == model.GameId && p.InviteResponse == true).ToList();
-                var index = 0;
-                foreach (var player in model.Players)
-                {
-                    var temp = gamePlayers.FirstOrDefault(u => u.GameId == model.GameId && u.UserId == player);
-                    temp.Attended = model.Attendees[index];
-                    if (model.Attendees[index])
-                    {
-                        var user = await _userManager.FindByIdAsync(temp.UserId);
-                        user.Remainder -= game.Price.Value;
-                    }
 
-                    _context.Update(temp);
-                    index++;
+                if (model.Attendees != null && model.Players != null)
+                {
+                    var gamePlayers = _context.GamePlayers.Where(p => p.GameId == model.GameId && p.InviteResponse == true).ToList();
+                    var index = 0;
+                    foreach (var player in model.Players)
+                    {
+                        var temp = gamePlayers.FirstOrDefault(u => u.GameId == model.GameId && u.UserId == player);
+                        temp.Attended = model.Attendees[index];
+                        if (model.Attendees[index])
+                        {
+                            var user = await _userManager.FindByIdAsync(temp.UserId);
+                            user.Remainder -= game.Price.Value;
+                        }
+
+                        _context.Update(temp);
+                        index++;
+                    }
                 }
 
+
                 await _context.SaveChangesAsync();
-                return new GameManagerResponse { Message = "The process has been completed.", IsSuccess = true };
+                return new GameManagerResponse { Message = "Oyun düzenleme başarılı.", IsSuccess = true };
             }
         }
 
@@ -440,5 +515,72 @@ namespace MagnifiSoccer.API.Services
                 return rating;
             }
         }
+
+        public List<Game> NoticeAsync(string userId)
+        {
+            var games = _context.GamePlayers.Where(x => x.UserId == userId && x.InviteResponse == null).ToList();
+            var result = new List<Game>();
+            foreach (var game in games)
+            {
+                result.Add(_context.Games.Find(game.GameId));
+            }
+
+            return result.OrderByDescending(o => o.GameDate).ToList();
+        }
+
+        public Game GetGameForthComing(string userId)
+        {
+            using (_context)
+            {
+                var currentDate = DateTime.Now;
+                var games = _context.GamePlayers.Include(x => x.Game)
+                    .Where(x => x.UserId == userId && x.Game.GameDate.Value > currentDate).OrderBy(o => o.Game.GameDate).ToList();
+
+                if (games.Count > 0)
+                {
+                    foreach (var gamePlayer in games[0].Game.GamePlayers)
+                    {
+                        var temp = _userManager.FindByIdAsync(gamePlayer.UserId).Result;
+                        gamePlayer.User = new User { FirstName = temp.FirstName, LastName = temp.LastName };
+                    }
+                    return games[0].Game;
+                }
+
+                return null;
+            }
+        }
+
+        public List<GamePlayer> GetListGameRating(string userId)
+        {
+            using (_context)
+            {
+                var myGroups = _context.GroupMembers.Where(x => x.UserId == userId).ToList();
+                var groupMembers = new List<GroupMember>();
+                foreach (var g in myGroups)
+                {
+                    groupMembers.AddRange(_context.GroupMembers.Where(x => x.GroupId == g.GroupId));
+                }
+                var gamePlayers = new List<GamePlayer>();
+                foreach (var g in groupMembers)
+                {
+                    gamePlayers.AddRange(_context.GamePlayers.Include(x => x.User).Where(x => x.UserId == g.UserId && x.GameRating > 0));
+                }
+
+                return gamePlayers.Distinct().ToList();
+            }
+        }
+
+        public List<GamePlayer> GetLastGameForGraph(string userId)
+        {
+            using (_context)
+            {
+                var games = _context.GamePlayers.Include(x => x.Game)
+                    .Where(x => x.UserId == userId && x.GameRating > 0).OrderBy(o => o.Game.GameDate).ToList();
+
+                return games.Count > 0 ? games : null;
+            }
+        }
+
     }
+
 }

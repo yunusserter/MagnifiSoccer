@@ -16,7 +16,7 @@ namespace MagnifiSoccer.API.Controllers
     [Authorize]
     public class GamesController : ControllerBase
     {
-        private IGameService _gameService;
+        private readonly IGameService _gameService;
 
         public GamesController(IGameService gameService)
         {
@@ -24,7 +24,7 @@ namespace MagnifiSoccer.API.Controllers
         }
 
         [HttpPost("create")]
-        public IActionResult CreateGame([FromBody]CreateGameForDto model)
+        public IActionResult CreateGame([FromBody] CreateGameForDto model)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
@@ -44,7 +44,7 @@ namespace MagnifiSoccer.API.Controllers
         }
 
         [HttpPut("update")]
-        public IActionResult UpdateGame([FromBody]UpdateGameForDto model)
+        public IActionResult UpdateGame([FromBody] UpdateGameForDto model)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
@@ -64,7 +64,7 @@ namespace MagnifiSoccer.API.Controllers
         }
 
         [HttpDelete("remove")]
-        public IActionResult RemoveGame([FromBody]RemoveGameForDto model)
+        public IActionResult RemoveGame([FromBody] RemoveGameForDto model)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
@@ -96,6 +96,19 @@ namespace MagnifiSoccer.API.Controllers
             return BadRequest();
         }
 
+        [HttpGet("forthComing")]
+        public IActionResult GetGameForthComing(int gameId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            if (userId != null)
+            {
+                return Ok(_gameService.GetGameForthComing(userId));
+            }
+
+            return BadRequest();
+        }
+
         [HttpGet]
         public IActionResult GetListGame()
         {
@@ -122,6 +135,20 @@ namespace MagnifiSoccer.API.Controllers
             return BadRequest();
         }
 
+
+        [HttpGet("gameRating")]
+        public IActionResult GetListGameRating()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            if (userId != null)
+            {
+                return Ok(_gameService.GetListGameRating(userId));
+            }
+
+            return BadRequest();
+        }
+
         //[HttpPost("autoSquad")]
         //public IActionResult AutoSquad([FromBody]AutoSquadForDto model)
         //{
@@ -136,16 +163,20 @@ namespace MagnifiSoccer.API.Controllers
         //}
 
         [HttpPut("editSquad")]
-        public IActionResult EditSquad([FromBody]EditSquadForDto model)
+        public IActionResult EditSquad([FromBody] EditSquadForDto model)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-
-            if (userId != null)
+            if (ModelState.IsValid)
             {
-                return Ok(_gameService.EditSquadAsync(model, userId).Result);
-            }
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
-            return BadRequest();
+                if (userId != null)
+                {
+                    return Ok(_gameService.EditSquadAsync(model, userId).Result);
+                }
+                return BadRequest();
+            }
+            return BadRequest("Some properties are not valid.");
+
         }
 
         [HttpGet("invite/{gameId}")]
@@ -161,40 +192,92 @@ namespace MagnifiSoccer.API.Controllers
             return BadRequest();
         }
 
-        [HttpPost("inviteResponse")]
-        public IActionResult InviteResponseUser([FromBody]InviteResponseForDto model)
+        [HttpGet("updateSentMail/{gameId}")]
+        public IActionResult UpdateSentMail(int gameId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
             if (userId != null)
             {
-                return Ok(_gameService.InviteResponseAsync(model, userId).Result);
+                return Ok(_gameService.UpdateGameSentEmail(userId, gameId).Result);
             }
 
             return BadRequest();
         }
 
-        [HttpPost("playerRating")]
-        public IActionResult PlayerRating([FromBody]PlayerRatingForDto model)
+        [HttpPost("inviteResponse")]
+        public IActionResult InviteResponseUser([FromBody]InviteResponseForDto model)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
-
-            if (userId != null)
+            if (ModelState.IsValid)
             {
-                return Ok(_gameService.PlayerRatingAsync(model, userId).Result);
-            }
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
-            return BadRequest();
+                if (userId != null)
+                {
+                    return Ok(_gameService.InviteResponseAsync(model, userId).Result);
+                }
+
+                return BadRequest();
+            }
+            return BadRequest("Some properties are not valid.");
+        }
+
+        [HttpPost("playerRating")]
+        public IActionResult PlayerRating([FromBody] PlayerRatingForDto model)
+        {
+            if (ModelState.IsValid)
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+                if (userId != null)
+                {
+                    return Ok(_gameService.PlayerRatingAsync(model, userId).Result);
+                }
+
+                return BadRequest();
+            }
+            return BadRequest("Some properties are not valid.");
         }
 
         [HttpPut("result")]
         public IActionResult Result([FromBody]ResultForDto model)
         {
+            if (ModelState.IsValid)
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+                if (userId != null)
+                {
+                    return Ok(_gameService.ResultAsync(model, userId).Result);
+                }
+
+                return BadRequest();
+            }
+            return BadRequest("Some properties are not valid.");
+        }
+
+
+        [HttpGet("notice")]
+        public IActionResult Notice()
+        {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
 
             if (userId != null)
             {
-                return Ok(_gameService.ResultAsync(model, userId).Result);
+                return Ok(_gameService.NoticeAsync(userId));
+            }
+
+            return BadRequest();
+        }
+
+        [HttpGet("getLastGameForGraph")]
+        public IActionResult GetLastGameForGraph()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            if (userId != null)
+            {
+                return Ok(_gameService.GetLastGameForGraph(userId));
             }
 
             return BadRequest();

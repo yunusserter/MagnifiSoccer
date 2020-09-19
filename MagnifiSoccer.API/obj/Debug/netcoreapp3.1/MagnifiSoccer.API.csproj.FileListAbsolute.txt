@@ -1,5 +1,6 @@
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\appsettings.Development.json
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\appsettings.json
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\libman.json
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\Properties\launchSettings.json
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\MagnifiSoccer.API.exe
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\MagnifiSoccer.API.deps.json
@@ -134,13 +135,10 @@ C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\De
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\MagnifiSoccer.Shared.dll
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\MagnifiSoccer.Shared.pdb
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.csprojAssemblyReference.cache
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\staticwebassets\MagnifiSoccer.API.StaticWebAssets.Manifest.cache
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\staticwebassets\MagnifiSoccer.API.StaticWebAssets.xml
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.MvcApplicationPartsAssemblyInfo.cache
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.RazorAssemblyInfo.cache
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.RazorAssemblyInfo.cs
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.AssemblyInfoInputs.cache
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.AssemblyInfo.cs
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.RazorAssemblyInfo.cache
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.RazorAssemblyInfo.cs
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.TagHelpers.input.cache
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.TagHelpers.output.cache
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.RazorCoreGenerate.cache
@@ -149,8 +147,12 @@ C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\De
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.RazorTargetAssemblyInfo.cs
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.Views.pdb
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.csproj.CopyComplete
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\staticwebassets\MagnifiSoccer.API.StaticWebAssets.Manifest.cache
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\staticwebassets\MagnifiSoccer.API.StaticWebAssets.xml
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.dll
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.pdb
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.csproj.CoreCompileInputs.cache
 C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.genruntimeconfig.cache
-C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\libman.json
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\Properties\ServiceDependencies\MagnifiSoccerAPI - Web Deploy\profile.arm.json
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\bin\Debug\netcoreapp3.1\CloudinaryDotNet.dll
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.csproj.CoreCompileInputs.cache
+C:\Users\yunus\source\repos\MagnifiSoccer\MagnifiSoccer\MagnifiSoccer.API\obj\Debug\netcoreapp3.1\MagnifiSoccer.API.MvcApplicationPartsAssemblyInfo.cache

@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using CloudinaryDotNet;
 using MagnifiSoccer.API.Services;
 using MagnifiSoccer.Shared.Dtos;
 using MagnifiSoccer.Shared.Dtos.GroupDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace MagnifiSoccer.API.Controllers
 {
@@ -17,7 +20,7 @@ namespace MagnifiSoccer.API.Controllers
     [Authorize]
     public class GroupsController : ControllerBase
     {
-        private IGroupService _groupService;
+        private readonly IGroupService _groupService;
 
         public GroupsController(IGroupService groupService)
         {
@@ -27,7 +30,7 @@ namespace MagnifiSoccer.API.Controllers
         [HttpGet("{groupId}")]
         public IActionResult GetGroup(string groupId)
         {
-            return Ok(_groupService.GetGroupAsync(groupId));
+            return Ok(_groupService.GetGroup(groupId));
         }
 
         [HttpGet]
@@ -37,16 +40,16 @@ namespace MagnifiSoccer.API.Controllers
             // System.Threading.Thread.Sleep(5000);
             if (userId != null)
             {
-                return Ok(_groupService.GetListGroupAsync(userId));
+                return Ok(_groupService.GetListGroup(userId));
             }
 
             return BadRequest();
         }
 
-        [HttpGet("all")]
-        public IActionResult GetAllGroupForSearch()
+        [HttpGet("search/{searchText}")]
+        public IActionResult GetGroupsForSearch(string searchText)
         {
-            return Ok(_groupService.GetAllGroupForSearch());
+            return Ok(_groupService.GetGroupsForSearch(searchText));
         }
 
         [HttpPost("create")]

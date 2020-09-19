@@ -19,8 +19,6 @@ namespace MagnifiSoccer.API.Models
         public string Role { get; set; }
 
         public Group Group { get; set; }
-
-        [ForeignKey("UserId")]
         public User User { get; set; }
     }
 }
